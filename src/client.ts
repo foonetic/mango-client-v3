@@ -166,6 +166,7 @@ export class MangoClient {
   lastSlot: number;
   recentBlockhash: string;
   recentBlockhashTime: number;
+  lastValidBlockHeight: number;
   maxStoredBlockhashes: number;
   timeout: number | null;
   // The commitment level used when fetching recentBlockHash
@@ -188,6 +189,7 @@ export class MangoClient {
     this.lastSlot = 0;
     this.recentBlockhash = '';
     this.recentBlockhashTime = 0;
+    this.lastValidBlockHeight = 0;
     this.maxStoredBlockhashes = opts?.maxStoredBlockhashes || 7;
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
@@ -627,17 +629,18 @@ export class MangoClient {
     const blockhash = (
       await this.connection.getRecentBlockhash(this.blockhashCommitment)
     ).blockhash;
-    blockhashTimes.push({ blockhash, timestamp: now });
+    blockhashTimes.push({ blockhash, timestamp: now, lastValidBlockHeight: 0 });
 
     const blockhashTime = (
       blockhashTimes.length >= this.maxStoredBlockhashes
         ? blockhashTimes.shift()
         : blockhashTimes[0]
-    ) as { blockhash: string; timestamp: number };
+    ) as { blockhash: string; timestamp: number; lastValidBlockHeight: number };
 
     this.timeout = 90000 - (now - blockhashTime.timestamp);
     this.recentBlockhash = blockhashTime.blockhash;
     this.recentBlockhashTime = blockhashTime.timestamp;
+    this.lastValidBlockHeight = blockhashTime.lastValidBlockHeight;
   }
 
   /**
