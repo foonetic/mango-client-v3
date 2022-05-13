@@ -626,10 +626,15 @@ export class MangoClient {
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {
     const now = getUnixTs();
-    const blockhash = (
-      await this.connection.getRecentBlockhash(this.blockhashCommitment)
-    ).blockhash;
-    blockhashTimes.push({ blockhash, timestamp: now, lastValidBlockHeight: 0 });
+    const blockInfo = await this.connection.getLatestBlockhash(
+      this.blockhashCommitment,
+    );
+    const blockhash = blockInfo.blockhash;
+    blockhashTimes.push({
+      blockhash,
+      timestamp: now,
+      lastValidBlockHeight: blockInfo.lastValidBlockHeight,
+    });
 
     const blockhashTime = (
       blockhashTimes.length >= this.maxStoredBlockhashes
