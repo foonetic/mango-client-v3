@@ -72,6 +72,7 @@
     "trailingComma": "all"
   },
   "dependencies": {
+    "@fardream/confirm-solana-transaction": "^1.0.1",
     "@project-serum/anchor": "^0.21.0",
     "@project-serum/serum": "0.13.55",
     "@project-serum/sol-wallet-adapter": "^0.2.0",

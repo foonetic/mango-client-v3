@@ -5,7 +5,6 @@ import {
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
-  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -140,7 +139,7 @@ import MangoGroup from './MangoGroup';
 import { makeCreateSpotOpenOrdersInstruction } from './instruction';
 import { ReferrerIdRecord, ReferrerIdRecordLayout } from './layout';
 import * as bs58 from 'bs58';
-
+import { confirmTransaction } from '@fardream/confirm-solana-transaction';
 /**
  * Get the current epoch timestamp in seconds with microsecond precision
  */
@@ -401,11 +400,12 @@ export class MangoClient {
       // NOTE(@fardream)
       // Now instead of using await transaction signature
       try {
-        await this.awaitTransactionSignatureConfirmation(
-          txid,
-          timeout,
-          confirmLevel,
+        await confirmTransaction(
+          this.connection,
           blockinfo.lastValidBlockHeight,
+          txid,
+          confirmLevel,
+          timeout * 1000,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -505,11 +505,12 @@ export class MangoClient {
         }
       })();
       try {
-        await this.awaitTransactionSignatureConfirmation(
-          txid,
-          timeout,
-          confirmLevel,
+        await confirmTransaction(
+          this.connection,
           lastValidBlockHeight,
+          txid,
+          confirmLevel,
+          timeout * 1000,
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -553,116 +554,6 @@ export class MangoClient {
       // console.log('Latency', txid, getUnixTs() - startTime);
       return txid;
     }
-  }
-
-  async awaitTransactionSignatureConfirmation(
-    txid: TransactionSignature,
-    timeout: number,
-    confirmLevel: TransactionConfirmationStatus,
-    lastValidBlockHeight: number,
-  ): Promise<SignatureStatus> {
-    const confirmLevels: (TransactionConfirmationStatus | null | undefined)[] =
-      ['finalized'];
-
-    if (confirmLevel === 'confirmed') {
-      confirmLevels.push('confirmed');
-    } else if (confirmLevel === 'processed') {
-      confirmLevels.push('confirmed');
-      confirmLevels.push('processed');
-    }
-
-    // NOTE(@fardream)
-    // Logic here
-    // do this in a loop:
-    // - try get confirmation status.
-    //   - if result is null, CONTINUE
-    //   - confirmation errored out, THROW Exception right away
-    //   - if result confirmation is not desired, CONTINUE
-    //   - if result is confirmed, RETURN confirmation status.
-    // - if CONTINUE, get the block height and verify the transaction is still valid.
-    let retrySleep = 400;
-
-    let stop_time = getUnixTs() + timeout / 1000;
-
-    // NOTE(@fardream):
-    // A promise is used here.We want to catch networking error and continue retry,
-    // but don't want to catch the error that we throw such as TimeOut. Promise allows us
-    // to do that by use reject for errors and resolve for return.
-    return await new Promise<SignatureStatus>((resolve, reject) => {
-      (async () => {
-        for (;;) {
-          // NOTE(@fardream): try-catch rest error, but throw everything else.
-          try {
-            const response = await this.connection.getSignatureStatuses([txid]);
-
-            const result = response && response.value[0];
-
-            // NOTE(@fardream):
-            // didn't get any result, continue.
-            if (!result) {
-              const currentBlockHeight = await this.connection.getBlockHeight(
-                confirmLevel,
-              );
-              if (currentBlockHeight > lastValidBlockHeight) {
-                reject(
-                  new MangoError({ txid, message: 'transaction dropped' }),
-                );
-                return;
-              }
-              continue;
-              // console.log('REST null result for', txid, result);
-            }
-
-            // NOTE(@fardream):
-            // Result is error, reject
-            if (result.err) {
-              console.log('REST error for', txid, result);
-              reject(result.err);
-              return;
-            }
-
-            // NOTE(@fardream):
-            // Confirmed by not desired status, conintue
-            if (
-              !(
-                result.confirmations ||
-                confirmLevels.includes(result.confirmationStatus)
-              )
-            ) {
-              console.log('REST not confirmed', txid, result);
-              const currentBlockHeight = await this.connection.getBlockHeight(
-                confirmLevel,
-              );
-              if (currentBlockHeight > lastValidBlockHeight) {
-                reject(
-                  new MangoError({ txid, message: 'transaction dropped' }),
-                );
-                return;
-              }
-              continue;
-            }
-
-            // NOTE(@fardream):
-            // confirmed the status, resolve.
-            this.lastSlot = response?.context?.slot;
-            console.log('REST confirmed', txid, result);
-            resolve(result);
-            // break
-            return;
-          } catch (e) {
-            console.log('REST connection error: txid', txid, e);
-          }
-
-          if (getUnixTs() > stop_time) {
-            reject(new TimeoutError({ txid }));
-            return;
-          }
-
-          await sleep(retrySleep);
-          retrySleep *= 2;
-        }
-      })();
-    });
   }
 
   async updateRecentBlockhash(blockhashTimes: BlockhashTimes[]) {

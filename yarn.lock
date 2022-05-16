@@ -73,6 +73,13 @@
     "@ethersproject/logger" "^5.5.0"
     hash.js "1.1.7"
 
+"@fardream/confirm-solana-transaction@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@fardream/confirm-solana-transaction/-/confirm-solana-transaction-1.0.1.tgz#e41840ebe3051d727dac2077ba4c8bc17b7b69ac"
+  integrity sha512-ACeqtsvCSp65XATwymwGCdmFBz5s4YW+jgU6xWGQIHb5d69NY/iyjf17WvCDWuEH5Jnf+Siywbfcb6Pmg0UmVA==
+  dependencies:
+    "@solana/web3.js" ">=1.32.1"
+
 "@jest/types@^26.6.2":
   version "26.6.2"
   resolved "https://registry.yarnpkg.com/@jest/types/-/types-26.6.2.tgz#bef5a532030e1d88a2f5a6d933f84e97226ed48e"
@@ -210,7 +217,7 @@
     buffer-layout "^1.2.0"
     dotenv "10.0.0"
 
-"@solana/web3.js@^1.12.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.32.1":
+"@solana/web3.js@>=1.32.1", "@solana/web3.js@^1.12.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.32.1":
   version "1.41.8"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.41.8.tgz#10459c02ac3d919e33c8d5c27cb9a8fbae0fe9d2"
   integrity sha512-IJUUvwToVFaUOLFr6+E8HXGmd53h6Z9OtywX0q/UM+q+0/nuDcaEq+/eE3yYuopZN00v6M442fFS5ONgUBBmDQ==
