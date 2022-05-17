@@ -5,6 +5,7 @@ import {
   Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
+  SignatureStatus,
   SimulatedTransactionResponse,
   SystemProgram,
   Transaction,
@@ -171,6 +172,9 @@ export class MangoClient {
   timeout: number | null;
   // The commitment level used when fetching recentBlockHash
   blockhashCommitment: Commitment;
+  // signature status
+  signatureStatus: Map<TransactionSignature, SignatureStatus>;
+
   postSendTxCallback?: ({ txid: string }) => void;
 
   constructor(
@@ -194,6 +198,7 @@ export class MangoClient {
     this.blockhashCommitment = opts?.blockhashCommitment || 'confirmed';
     this.timeout = opts?.timeout || 60000;
     this.sendConnection = opts.sendConnection;
+    this.signatureStatus = new Map();
     if (opts.postSendTxCallback) {
       this.postSendTxCallback = opts.postSendTxCallback;
     }
@@ -400,12 +405,15 @@ export class MangoClient {
       // NOTE(@fardream)
       // Now instead of using await transaction signature
       try {
-        await confirmTransaction(
-          this.connection,
-          blockinfo.lastValidBlockHeight,
+        this.signatureStatus.set(
           txid,
-          confirmLevel,
-          timeout * 1000,
+          await confirmTransaction(
+            this.connection,
+            blockinfo.lastValidBlockHeight,
+            txid,
+            confirmLevel,
+            timeout * 1000,
+          ),
         );
       } catch (err: any) {
         if (err.timeout) {
@@ -1650,7 +1658,10 @@ export class MangoClient {
     bookSideInfo?: AccountInfo<Buffer>,
     reduceOnly?: boolean,
     referrerMangoAccountPk?: PublicKey,
-  ): Promise<TransactionSignature | undefined> {
+  ): Promise<
+    | { signature: TransactionSignature; status: SignatureStatus | undefined }
+    | undefined
+  > {
     if (!owner.publicKey) {
       return;
     }
@@ -1718,7 +1729,13 @@ export class MangoClient {
       transaction.add(consumeInstruction);
     }
 
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+    const tx_id = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
+
+    return { signature: tx_id, status: this.signatureStatus.get(tx_id) };
   }
 
   /**
