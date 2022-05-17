@@ -1764,7 +1764,10 @@ export class MangoClient {
       referrerMangoAccountPk?: PublicKey;
       expiryTimestamp?: number;
     },
-  ): Promise<TransactionSignature | undefined> {
+  ): Promise<
+    | { signature: TransactionSignature; status: SignatureStatus | undefined }
+    | undefined
+  > {
     if (!owner.publicKey) {
       return;
     }
@@ -1854,7 +1857,13 @@ export class MangoClient {
       transaction.add(consumeInstruction);
     }
 
-    return await this.sendTransaction(transaction, owner, additionalSigners);
+    const tx_id = await this.sendTransaction(
+      transaction,
+      owner,
+      additionalSigners,
+    );
+
+    return { signature: tx_id, status: this.signatureStatus.get(tx_id) };
   }
 
   /**
